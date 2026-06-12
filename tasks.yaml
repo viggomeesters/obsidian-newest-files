@@ -1,0 +1,140 @@
+schema_version: 1
+updated: "2026-06-12 12:57 +0200"
+owner: viggomeesters
+portfolio: obsidian-plugins
+repo: viggomeesters/obsidian-newest-files
+
+working_contract:
+  plugin_source_repo: /home/viggo/github/obsidian-newest-files
+  test_vault_repo: viggomeesters/obsidian-test-vault
+  test_vault_path_windows: "C:\\Users\\viggo\\github\\obsidian-test-vault"
+  test_vault_path_wsl: /mnt/c/Users/viggo/github/obsidian-test-vault
+  forbidden_paths:
+    - /mnt/c/Users/Viggo/Syncthing/vault
+    - /mnt/c/Users/viggo/Syncthing/vault
+  rules:
+    - Do not develop or test plugins in the main Life OS vault.
+    - Copy built plugin runtime only into the Windows-local test vault under .obsidian/plugins/<plugin-id>/.
+    - Keep plugins small, bare-bones, and one-purpose; do not bundle file-explorer utilities into one plugin.
+    - Main vault may only be read for product context if explicitly requested; never write plugin artifacts there.
+
+priorities:
+  - NF-001
+  - NF-002
+  - NF-003
+  - PORT-001
+  - FZA-001
+  - DPV-001
+
+statuses:
+  ready: ready for agent execution
+  blocked: needs user/environment input
+  done: completed and verified
+  backlog: accepted but not next
+
+tasks:
+  - id: NF-001
+    title: Reproduce and repair Newest Files in the Windows-local test vault
+    status: ready
+    type: bugfix
+    repo: viggomeesters/obsidian-newest-files
+    scope:
+      modify:
+        - src/**
+        - tests/**
+        - README.md
+        - tasks.yaml
+      runtime_copy_allowed:
+        - /mnt/c/Users/viggo/github/obsidian-test-vault/.obsidian/plugins/newest-files/main.js
+        - /mnt/c/Users/viggo/github/obsidian-test-vault/.obsidian/plugins/newest-files/manifest.json
+        - /mnt/c/Users/viggo/github/obsidian-test-vault/.obsidian/plugins/newest-files/styles.css
+      do_not_touch:
+        - /mnt/c/Users/Viggo/Syncthing/vault/**
+        - /mnt/c/Users/viggo/Syncthing/vault/**
+    acceptance:
+      - npm install succeeds or existing package-lock/npm cache is usable.
+      - npm run lint passes.
+      - npm run typecheck passes.
+      - npm test passes.
+      - npm run build passes.
+      - Built main.js/manifest.json/styles.css are copied into the Windows-local test vault only.
+      - Obsidian opens obsidian-test-vault without the previous WSL UNC EISDIR watcher error.
+      - Newest Files view can be opened from command/ribbon and lists Markdown plus non-Markdown fixture files.
+      - Create/delete/rename/modify behavior is manually smoke-tested in the test vault.
+    notes:
+      - Current test vault path is Windows-local because Obsidian failed on the WSL UNC path with EISDIR watcher errors.
+      - If the bug cannot be reproduced, document exact smoke-test steps and keep the task open with observed behavior.
+
+  - id: NF-002
+    title: Add a deterministic test-vault sync script for Newest Files runtime artifacts
+    status: ready
+    type: tooling
+    repo: viggomeesters/obsidian-newest-files
+    depends_on:
+      - NF-001
+    scope:
+      modify:
+        - package.json
+        - scripts/**
+        - README.md
+        - tasks.yaml
+      runtime_copy_allowed:
+        - /mnt/c/Users/viggo/github/obsidian-test-vault/.obsidian/plugins/newest-files/main.js
+        - /mnt/c/Users/viggo/github/obsidian-test-vault/.obsidian/plugins/newest-files/manifest.json
+        - /mnt/c/Users/viggo/github/obsidian-test-vault/.obsidian/plugins/newest-files/styles.css
+    acceptance:
+      - A single command builds and copies runtime artifacts to the Windows-local test vault.
+      - The command refuses to run if the target path contains Syncthing/vault or does not look like obsidian-test-vault.
+      - README documents the command and the main-vault boundary.
+      - npm run lint, npm run typecheck, npm test, and npm run build pass.
+
+  - id: NF-003
+    title: Reconcile Newest Files release and plugin registry metadata after repair
+    status: blocked
+    type: release-reconcile
+    repo: viggomeesters/obsidian-newest-files
+    depends_on:
+      - NF-001
+      - NF-002
+    blocked_by:
+      - Decide whether the repair bumps version from 0.1.0 to 0.1.1.
+      - Decide whether to publish a GitHub release now or keep local-only until more smoke testing.
+    acceptance:
+      - manifest.json and package.json versions agree.
+      - GitHub release/tag state matches the chosen version, if publishing.
+      - Any external registry/vault portfolio metadata is updated only after repo/release state is auditably true.
+
+  - id: PORT-001
+    title: Fix known release drift for existing small Obsidian plugins
+    status: backlog
+    type: portfolio-maintenance
+    repos:
+      - viggomeesters/obsidian-minimal-hidden-files
+      - viggomeesters/obsidian-sql-viewer
+    acceptance:
+      - minimal-hidden-files manifest/release metadata agree.
+      - sql-viewer manifest/release metadata agree.
+      - No plugin bundling or scope expansion is introduced.
+    notes:
+      - Known drift from portfolio snapshot: minimal-hidden-files manifest 0.1.3 vs release 0.1.2; sql-viewer manifest 0.1.2 vs release 0.1.1.
+
+  - id: FZA-001
+    title: Spike Folder Z-to-A native File Explorer sorting feasibility
+    status: backlog
+    type: spike
+    repo: viggomeesters/obsidian-folder-sort-newest
+    acceptance:
+      - Confirm whether Obsidian native File Explorer folder ordering can be influenced safely.
+      - If internals are brittle, document fallback options before building.
+      - Plugin remains one-purpose and separate from Newest Files and Minimal Hidden Files.
+
+  - id: DPV-001
+    title: Build Diff/Patch Viewer as a separate read-only viewer plugin
+    status: backlog
+    type: feature
+    repo: viggomeesters/obsidian-diff-patch-viewer
+    acceptance:
+      - Opens .diff and .patch files read-only.
+      - Shows file list, hunks, additions/deletions, and raw fallback.
+      - Does not apply patches, call git, or write files.
+      - Remains separate from Git Viewer.
