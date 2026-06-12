@@ -1,5 +1,5 @@
 schema_version: 1
-updated: "2026-06-12 21:08 +0200"
+updated: "2026-06-12 22:24 +0200"
 owner: viggomeesters
 portfolio: obsidian-plugins
 repo: viggomeesters/obsidian-newest-files
@@ -178,7 +178,7 @@ tasks:
 
   - id: DPV-001
     title: Build Diff/Patch Viewer as a separate read-only viewer plugin
-    status: backlog
+    status: done
     type: feature
     repo: viggomeesters/obsidian-diff-patch-viewer
     acceptance:
@@ -186,3 +186,13 @@ tasks:
       - Shows file list, hunks, additions/deletions, and raw fallback.
       - Does not apply patches, call git, or write files.
       - Remains separate from Git Viewer.
+    completed:
+      at: "2026-06-12 22:24 +0200"
+      evidence:
+        - New separate repo created at /home/viggo/github/obsidian-diff-patch-viewer.
+        - Parser tests were written first and initially failed before implementation.
+        - Plugin registers .diff and .patch extensions to a read-only FileView.
+        - Viewer renders file list, hunk headers, additions/deletions, and raw fallback for non-unified text.
+        - No patch application, git calls, or vault writes are implemented by the plugin view.
+        - npm run lint, npm run typecheck, npm test, npm run build, npm run sync:test-vault, and npm run smoke:cdp passed.
+        - sha256sum proved synced runtime artifacts match repo artifacts in obsidian-test-vault.
