@@ -1,5 +1,5 @@
 schema_version: 1
-updated: "2026-06-12 22:24 +0200"
+updated: "2026-06-12 23:13 +0200"
 owner: viggomeesters
 portfolio: obsidian-plugins
 repo: viggomeesters/obsidian-newest-files
@@ -159,17 +159,17 @@ tasks:
     title: Spike Folder Z-to-A native File Explorer sorting feasibility
     status: done
     type: spike
-    repo: viggomeesters/obsidian-folder-sort-newest
+    repo: viggomeesters/obsidian-folder-sort-z-to-a
     acceptance:
       - Confirm whether Obsidian native File Explorer folder ordering can be influenced safely.
       - If internals are brittle, document fallback options before building.
       - Plugin remains one-purpose and separate from Newest Files and Minimal Hidden Files.
     completed:
       at: "2026-06-12 21:08 +0200"
-      task_id: T20260612-210834-task-obsidian-folder-sort-newest
+      task_id: T20260612-210834-task-obsidian-folder-sort-z-to-a
       verdict: PARTIAL
       evidence:
-        - New separate repo created at /home/viggo/github/obsidian-folder-sort-newest.
+        - New separate repo created at /home/viggo/github/obsidian-folder-sort-z-to-a.
         - Native File Explorer exposes internal getSortedFolderItems seam; no public stable API found for folder comparator override.
         - Prototype plugin sorts folder items Z-to-A, leaves files in native order, and restores native method on unload.
         - CDP smoke against obsidian-test-vault proved native order before, Z-to-A after enable, native order after disable.
