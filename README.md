@@ -37,12 +37,46 @@ This means:
 ```bash
 npm install
 npm run build
+npm run sync:test-vault
 npm run lint
 npm run typecheck
 npm test
 ```
 
 The generated `main.js`, `manifest.json` and `styles.css` are the files Obsidian loads from the plugin folder.
+
+## Sync to the Windows-local test vault
+
+Use the sync command to build and copy the runtime artifacts to the Windows-local test vault only:
+
+```bash
+npm run sync:test-vault
+```
+
+Default target:
+
+```text
+/mnt/c/Users/viggo/github/obsidian-test-vault/.obsidian/plugins/newest-files
+```
+
+The command copies only:
+
+- `main.js`
+- `manifest.json`
+- `styles.css`
+
+Safety boundaries:
+
+- Refuses any target containing `Syncthing/vault`.
+- Refuses any target that is not inside `obsidian-test-vault/.obsidian/plugins/newest-files`.
+- Does not write to the main Life OS vault.
+
+Optional dry run / explicit target:
+
+```bash
+npm run sync:test-vault -- --dry-run
+npm run sync:test-vault -- --target /mnt/c/Users/viggo/github/obsidian-test-vault/.obsidian/plugins/newest-files
+```
 
 ## CDP smoke route on Windows/WSL
 

@@ -1,5 +1,5 @@
 schema_version: 1
-updated: "2026-06-12 16:05 +0200"
+updated: "2026-06-12 20:00 +0200"
 owner: viggomeesters
 portfolio: obsidian-plugins
 repo: viggomeesters/obsidian-newest-files
@@ -80,7 +80,7 @@ tasks:
 
   - id: NF-002
     title: Add a deterministic test-vault sync script for Newest Files runtime artifacts
-    status: ready
+    status: done
     type: tooling
     repo: viggomeesters/obsidian-newest-files
     depends_on:
@@ -100,6 +100,17 @@ tasks:
       - The command refuses to run if the target path contains Syncthing/vault or does not look like obsidian-test-vault.
       - README documents the command and the main-vault boundary.
       - npm run lint, npm run typecheck, npm test, and npm run build pass.
+    completed:
+      at: "2026-06-12 20:00 +0200"
+      command: npm run sync:test-vault
+      evidence:
+        - npm run sync:test-vault -- --help passed.
+        - npm run sync:test-vault -- --dry-run passed.
+        - Unsafe Syncthing/vault target was refused before build/copy.
+        - Non obsidian-test-vault target was refused before build/copy.
+        - npm run sync:test-vault built and copied main.js, manifest.json, and styles.css to the Windows-local test vault plugin folder.
+        - sha256sum proved copied runtime artifacts match repo artifacts.
+        - npm run lint, npm run typecheck, npm test, npm run build, and npm run smoke:cdp passed.
 
   - id: NF-003
     title: Reconcile Newest Files release and plugin registry metadata after repair

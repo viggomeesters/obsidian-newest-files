@@ -12,6 +12,7 @@
     "lint": "node scripts/lint.mjs",
     "typecheck": "tsc --noEmit",
     "test": "npm run build:test && node --test tests/*.test.mjs",
+    "sync:test-vault": "node scripts/sync-test-vault.mjs",
     "smoke:cdp": "node scripts/smoke-cdp.mjs"
   },
   "devDependencies": {
