@@ -1,5 +1,5 @@
 schema_version: 1
-updated: "2026-06-12 15:50 +0200"
+updated: "2026-06-12 16:05 +0200"
 owner: viggomeesters
 portfolio: obsidian-plugins
 repo: viggomeesters/obsidian-newest-files
@@ -103,19 +103,24 @@ tasks:
 
   - id: NF-003
     title: Reconcile Newest Files release and plugin registry metadata after repair
-    status: blocked
+    status: done
     type: release-reconcile
     repo: viggomeesters/obsidian-newest-files
     depends_on:
       - NF-001
       - NF-002
-    blocked_by:
-      - Decide whether the repair bumps version from 0.1.0 to 0.1.1.
-      - Decide whether to publish a GitHub release now or keep local-only until more smoke testing.
     acceptance:
       - manifest.json and package.json versions agree.
       - GitHub release/tag state matches the chosen version, if publishing.
       - Any external registry/vault portfolio metadata is updated only after repo/release state is auditably true.
+    completed:
+      at: "2026-06-12 16:05 +0200"
+      version: 0.1.1
+      release_policy: User explicitly requested NF-003 with 0.1.1 GitHub release.
+      evidence:
+        - package.json, package-lock.json, and manifest.json versions set to 0.1.1.
+        - GitHub release/tag 0.1.1 published after tests/build passed.
+        - NF-002 remains a separate ready tooling task; release was executed by explicit user instruction.
 
   - id: PORT-001
     title: Fix known release drift for existing small Obsidian plugins
