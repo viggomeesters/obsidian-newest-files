@@ -1,5 +1,5 @@
 schema_version: 1
-updated: "2026-06-12 12:57 +0200"
+updated: "2026-06-12 15:50 +0200"
 owner: viggomeesters
 portfolio: obsidian-plugins
 repo: viggomeesters/obsidian-newest-files
@@ -35,7 +35,7 @@ statuses:
 tasks:
   - id: NF-001
     title: Reproduce and repair Newest Files in the Windows-local test vault
-    status: ready
+    status: done
     type: bugfix
     repo: viggomeesters/obsidian-newest-files
     scope:
@@ -64,6 +64,19 @@ tasks:
     notes:
       - Current test vault path is Windows-local because Obsidian failed on the WSL UNC path with EISDIR watcher errors.
       - If the bug cannot be reproduced, document exact smoke-test steps and keep the task open with observed behavior.
+    completed:
+      at: "2026-06-12 15:50 +0200"
+      evidence:
+        - npm run lint passed.
+        - npm run typecheck passed.
+        - npm test passed with 13/13 tests.
+        - npm run build passed.
+        - npm run smoke:cdp passed against obsidian-test-vault via Windows-local Obsidian CDP listener on 127.0.0.1:9222.
+        - Runtime artifacts were copied only to /mnt/c/Users/viggo/github/obsidian-test-vault/.obsidian/plugins/newest-files/.
+        - No GitHub release or version bump was made for this repair.
+      commits:
+        - de0c689 fix: make newest files startup lazy
+        - 6895bed test: add Obsidian CDP smoke route
 
   - id: NF-002
     title: Add a deterministic test-vault sync script for Newest Files runtime artifacts
