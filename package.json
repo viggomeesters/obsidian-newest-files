@@ -11,7 +11,8 @@
     "build:test": "esbuild src/core.ts --bundle --platform=node --format=esm --outfile=dist/core.mjs && esbuild src/main.ts --bundle --platform=node --format=cjs --external:obsidian --outfile=dist/main.cjs",
     "lint": "node scripts/lint.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build:test && node --test tests/*.test.mjs"
+    "test": "npm run build:test && node --test tests/*.test.mjs",
+    "smoke:cdp": "node scripts/smoke-cdp.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
