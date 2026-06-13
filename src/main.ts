@@ -26,8 +26,9 @@ import {
 } from "./core";
 
 const VIEW_TYPE_NEWEST_FILES = "newest-files-view";
-const SAVE_DELAY_MS = 350;
-const REBUILD_CHUNK_SIZE = 500;
+const SAVE_DELAY_MS = 1_000;
+const REFRESH_DELAY_MS = 120;
+const REBUILD_CHUNK_SIZE = 250;
 
 interface NewestFilesPluginData {
   settings?: Partial<NewestFilesSettings>;
@@ -38,6 +39,8 @@ export default class NewestFilesPlugin extends Plugin {
   settings: NewestFilesSettings = DEFAULT_SETTINGS;
   files: Record<string, IndexedFile> = {};
   private saveTimer: number | null = null;
+  private refreshTimer: number | null = null;
+  private pruneTimer: number | null = null;
   private eventsRegistered = false;
 
   async onload(): Promise<void> {
@@ -75,6 +78,14 @@ export default class NewestFilesPlugin extends Plugin {
       window.clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
+    if (this.refreshTimer !== null) {
+      window.clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+    if (this.pruneTimer !== null) {
+      window.clearTimeout(this.pruneTimer);
+      this.pruneTimer = null;
+    }
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_NEWEST_FILES);
   }
 
@@ -99,6 +110,15 @@ export default class NewestFilesPlugin extends Plugin {
     this.saveTimer = window.setTimeout(() => {
       this.saveTimer = null;
       void this.savePluginData();
+    }, SAVE_DELAY_MS);
+  }
+
+  queuePruneAndSave(): void {
+    if (this.pruneTimer !== null) return;
+    this.pruneTimer = window.setTimeout(() => {
+      this.pruneTimer = null;
+      this.files = trimIndex(this.files, this.settings);
+      this.queueSave();
     }, SAVE_DELAY_MS);
   }
 
@@ -138,7 +158,7 @@ export default class NewestFilesPlugin extends Plugin {
 
     this.files = trimIndex(nextIndex, this.settings);
     await this.savePluginData();
-    this.refreshViews();
+    this.renderViewsNow();
     new Notice(`Newest Files index rebuilt from vault file metadata. Kept ${Object.keys(this.files).length} files.`);
   }
 
@@ -158,6 +178,22 @@ export default class NewestFilesPlugin extends Plugin {
   }
 
   refreshViews(): void {
+    if (this.refreshTimer !== null) return;
+    this.refreshTimer = window.setTimeout(() => {
+      this.refreshTimer = null;
+      for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_NEWEST_FILES)) {
+        if (leaf.view instanceof NewestFilesView) {
+          leaf.view.render();
+        }
+      }
+    }, REFRESH_DELAY_MS);
+  }
+
+  renderViewsNow(): void {
+    if (this.refreshTimer !== null) {
+      window.clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_NEWEST_FILES)) {
       if (leaf.view instanceof NewestFilesView) {
         leaf.view.render();
@@ -169,7 +205,7 @@ export default class NewestFilesPlugin extends Plugin {
     this.settings = normalizeSettings({ ...this.settings, ...nextSettings });
     this.files = trimIndex(this.files, this.settings);
     await this.savePluginData();
-    this.refreshViews();
+    this.renderViewsNow();
   }
 
   private handleCreate(file: TAbstractFile): void {
@@ -180,8 +216,7 @@ export default class NewestFilesPlugin extends Plugin {
     this.files[file.path] = existing
       ? updateIndexedMetadata(existing, file)
       : makeIndexedFile(file, "event", this.settings, Date.now());
-    this.files = trimIndex(this.files, this.settings);
-    this.queueSave();
+    this.queuePruneAndSave();
     this.refreshViews();
   }
 
@@ -209,8 +244,7 @@ export default class NewestFilesPlugin extends Plugin {
     } else {
       this.files[file.path] = makeIndexedFile(file, "event", this.settings, Date.now());
     }
-    this.files = trimIndex(this.files, this.settings);
-    this.queueSave();
+    this.queuePruneAndSave();
     this.refreshViews();
   }
 
@@ -229,9 +263,16 @@ export default class NewestFilesPlugin extends Plugin {
     } else {
       this.files[file.path] = updateIndexedMetadata(existing, file);
     }
-    this.files = trimIndex(this.files, this.settings);
-    this.queueSave();
+    this.queuePruneAndSave();
     this.refreshViews();
+  }
+
+  private queueMissingFilePrune(): void {
+    if (this.pruneTimer !== null) return;
+    this.pruneTimer = window.setTimeout(() => {
+      this.pruneTimer = null;
+      this.pruneMissingIndexedFiles();
+    }, SAVE_DELAY_MS);
   }
 
   private pruneMissingIndexedFiles(): void {

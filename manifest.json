@@ -1,7 +1,7 @@
 {
   "id": "newest-files",
   "name": "Newest Files",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minAppVersion": "1.5.0",
   "description": "List the newest files added to the vault, including attachments that have never been opened.",
   "author": "Viggo Meesters",
