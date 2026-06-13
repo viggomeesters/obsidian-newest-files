@@ -41,6 +41,8 @@ npm run sync:test-vault
 npm run lint
 npm run typecheck
 npm test
+npm run smoke:cdp
+npm run community:check
 ```
 
 The generated `main.js`, `manifest.json` and `styles.css` are the files Obsidian loads from the plugin folder.
@@ -113,3 +115,25 @@ The script writes JSON evidence to stdout and saves a screenshot to `/tmp/newest
 ```bash
 npm run smoke:cdp -- --port 9223 --screenshot /tmp/newest-files-smoke.png
 ```
+
+## Community release checklist
+
+Before submitting or publishing a community release:
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run sync:test-vault
+npm run smoke:cdp
+npm run community:check
+```
+
+GitHub release assets must include exactly the Obsidian runtime files:
+
+- `main.js`
+- `manifest.json`
+- `styles.css`
+
+The release tag must match `manifest.json.version`.
