@@ -402,7 +402,7 @@ class NewestFilesSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass("newest-files-settings");
-    new Setting(containerEl).setName("Newest Files").setHeading();
+    new Setting(containerEl).setName("File list").setHeading();
 
     new Setting(containerEl)
       .setName("Maximum files")

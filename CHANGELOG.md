@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- Renamed the settings tab heading from `Newest Files` to `File list` to avoid repeating the plugin name in settings headings.
+- Hardened `npm run community:check` to catch plugin-name settings headings before release.
+
 ## 0.1.3
 
 - Stopped detaching custom view leaves during `onunload`, preserving user pane placement across plugin reloads.

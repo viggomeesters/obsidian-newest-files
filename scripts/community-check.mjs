@@ -11,6 +11,9 @@ const allowedManifestNamePattern = /^[A-Za-z0-9 ()+-]+$/;
 const lowerName = manifest.name.toLowerCase();
 const lowerDescription = manifest.description.toLowerCase();
 const directHeadingElementPattern = /\.createEl\(\s*["']h[1-6]["']/;
+const pluginNameHeadingPattern = new RegExp(
+  `\\.setName\\(\\s*['\"]${escapeRegExp(manifest.name)}['\"]\\s*\\)\\.setHeading\\(`,
+);
 
 const checks = [
   [fs.existsSync("README.md"), "README"],
@@ -36,6 +39,7 @@ const checks = [
   [!source.includes("detachLeavesOfType"), "does not detach leaves in onunload"],
   [!source.includes("revealLeaf("), "does not use revealLeaf with current minAppVersion"],
   [!directHeadingElementPattern.test(source), "settings headings use Setting.setHeading instead of direct h1-h6 elements"],
+  [!pluginNameHeadingPattern.test(source), "settings headings avoid the plugin name"],
 ];
 
 const failures = checks.filter(([ok]) => !ok).map(([, message]) => message);
@@ -84,4 +88,8 @@ function fetchText(url) {
 
 async function fetchJson(url) {
   return JSON.parse(await fetchText(url));
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
