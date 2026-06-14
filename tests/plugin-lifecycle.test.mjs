@@ -243,6 +243,10 @@ class FakeSetting {
     return this;
   }
 
+  setHeading() {
+    return this;
+  }
+
   addText(callback) {
     callback(fakeTextControl());
     return this;

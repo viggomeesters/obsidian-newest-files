@@ -1,9 +1,17 @@
 {
   "name": "obsidian-newest-files",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Newest-first vault file list for Obsidian.",
   "license": "MIT",
   "author": "Viggo Meesters",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viggomeesters/obsidian-newest-files.git"
+  },
+  "bugs": {
+    "url": "https://github.com/viggomeesters/obsidian-newest-files/issues"
+  },
+  "homepage": "https://github.com/viggomeesters/obsidian-newest-files#readme",
   "type": "module",
   "scripts": {
     "build": "NODE_ENV=production node esbuild.config.mjs",

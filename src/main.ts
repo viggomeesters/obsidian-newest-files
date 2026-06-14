@@ -86,7 +86,6 @@ export default class NewestFilesPlugin extends Plugin {
       window.clearTimeout(this.pruneTimer);
       this.pruneTimer = null;
     }
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_NEWEST_FILES);
   }
 
   async loadPluginData(): Promise<void> {
@@ -126,7 +125,6 @@ export default class NewestFilesPlugin extends Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NEWEST_FILES)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(false);
     await leaf.setViewState({ type: VIEW_TYPE_NEWEST_FILES, active: true });
-    this.app.workspace.revealLeaf(leaf);
     this.refreshViews();
   }
 
@@ -404,7 +402,7 @@ class NewestFilesSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass("newest-files-settings");
-    containerEl.createEl("h2", { text: "Newest Files" });
+    new Setting(containerEl).setName("Newest Files").setHeading();
 
     new Setting(containerEl)
       .setName("Maximum files")
