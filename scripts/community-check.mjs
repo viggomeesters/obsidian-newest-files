@@ -11,6 +11,7 @@ const allowedManifestNamePattern = /^[A-Za-z0-9 ()+-]+$/;
 const lowerName = manifest.name.toLowerCase();
 const lowerDescription = manifest.description.toLowerCase();
 const directHeadingElementPattern = /\.createEl\(\s*["']h[1-6]["']/;
+const awaitedRevealLeafPattern = /await\s+[\w.]*\brevealLeaf\(/;
 const pluginNameHeadingPattern = new RegExp(
   `\\.setName\\(\\s*['\"]${escapeRegExp(manifest.name)}['\"]\\s*\\)\\.setHeading\\(`,
 );
@@ -37,7 +38,7 @@ const checks = [
   [typeof manifest.description === "string" && manifest.description.length > 0 && !lowerDescription.startsWith("this is a plugin"), "description"],
   [!lowerDescription.includes("obsidian"), "description avoids obsidian"],
   [!source.includes("detachLeavesOfType"), "does not detach leaves in onunload"],
-  [!source.includes("revealLeaf("), "does not use revealLeaf with current minAppVersion"],
+  [!awaitedRevealLeafPattern.test(source) || meetsMinAppVersion("1.7.2"), "does not await revealLeaf below minAppVersion 1.7.2"],
   [!directHeadingElementPattern.test(source), "settings headings use Setting.setHeading instead of direct h1-h6 elements"],
   [!pluginNameHeadingPattern.test(source), "settings headings avoid the plugin name"],
 ];
@@ -88,6 +89,18 @@ function fetchText(url) {
 
 async function fetchJson(url) {
   return JSON.parse(await fetchText(url));
+}
+
+function meetsMinAppVersion(required) {
+  const declared = String(manifest.minAppVersion ?? "").split(".").map(Number);
+  const target = required.split(".").map(Number);
+
+  for (let index = 0; index < target.length; index += 1) {
+    const current = declared[index] ?? 0;
+    if (!Number.isFinite(current)) return false;
+    if (current !== target[index]) return current > target[index];
+  }
+  return true;
 }
 
 function escapeRegExp(value) {

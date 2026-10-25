@@ -485,3 +485,25 @@ test("manual rebuild is explicit and persists a bounded index", async () => {
   assert.equal(plugin.files["system/index.sqlite-wal"], undefined);
   assert.equal(Object.keys(app.savedData.files).length, 5_000);
 });
+
+test("activating the view reveals the leaf so a collapsed sidebar opens", async () => {
+  globalThis.window = globalThis;
+  const NewestFilesPlugin = loadPluginClass();
+  const app = makeApp([new FakeTFile("notes/existing.md", 100, 200, 50)]);
+  const plugin = new NewestFilesPlugin(app);
+
+  await plugin.onload();
+  assert.equal(app.workspace.revealedLeaf, null);
+
+  await plugin.activateView();
+
+  const leaf = app.workspace.getLeavesOfType("newest-files-view")[0];
+  assert.ok(leaf, "expected a leaf hosting the view");
+  assert.equal(app.workspace.revealedLeaf, leaf);
+
+  app.workspace.revealedLeaf = null;
+  await plugin.activateView();
+
+  assert.equal(app.workspace.getLeavesOfType("newest-files-view").length, 1);
+  assert.equal(app.workspace.revealedLeaf, leaf, "an existing leaf must be revealed again");
+});

@@ -125,6 +125,8 @@ export default class NewestFilesPlugin extends Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NEWEST_FILES)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(false);
     await leaf.setViewState({ type: VIEW_TYPE_NEWEST_FILES, active: true });
+    // Not awaited: revealLeaf only returns a Promise from 1.7.2, and minAppVersion is 1.5.0.
+    this.app.workspace.revealLeaf(leaf);
     this.refreshViews();
   }
 
