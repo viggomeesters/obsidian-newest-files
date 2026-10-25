@@ -49,7 +49,6 @@ export const MAX_INDEX_ENTRIES = 5000;
 export const DEFAULT_SETTINGS: NewestFilesSettings = {
   maxItems: 50,
   excludedPaths: [
-    ".obsidian/",
     ".trash/",
     ".git/",
     "node_modules/",
@@ -107,7 +106,8 @@ export function isExcludedPath(path: string, excludedPaths: string): boolean {
   });
 }
 
-export function shouldDisplayFile(file: FileLike, settings: NewestFilesSettings): boolean {
+export function shouldDisplayFile(file: FileLike, settings: NewestFilesSettings, configDir?: string): boolean {
+  if (configDir && isExcludedPath(file.path, configDir)) return false;
   if (isExcludedPath(file.path, settings.excludedPaths)) return false;
   if (isGeneratedSidecar(file.path)) return false;
 

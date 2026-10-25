@@ -118,6 +118,7 @@
   padding: 12px 0;
 }
 
-.newest-files-settings textarea {
+.newest-files-settings textarea,
+.newest-files-settings__textarea {
   min-height: 80px;
 }

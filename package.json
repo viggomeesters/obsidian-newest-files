@@ -1,6 +1,6 @@
 {
   "name": "obsidian-newest-files",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Newest-first vault file list for Obsidian.",
   "license": "MIT",
   "author": "Viggo Meesters",
@@ -14,12 +14,12 @@
   "homepage": "https://github.com/viggomeesters/obsidian-newest-files#readme",
   "type": "module",
   "scripts": {
-    "build": "NODE_ENV=production node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
     "dev": "node esbuild.config.mjs",
     "build:test": "esbuild src/core.ts --bundle --platform=node --format=esm --outfile=dist/core.mjs && esbuild src/main.ts --bundle --platform=node --format=cjs --external:obsidian --outfile=dist/main.cjs",
     "lint": "node scripts/lint.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build:test && node --test tests/*.test.mjs",
+    "test": "node scripts/reveal-compat-test.mjs && npm run build:test && node --test tests/*.test.mjs",
     "sync:test-vault": "node scripts/sync-test-vault.mjs",
     "smoke:cdp": "node scripts/smoke-cdp.mjs",
     "community:check": "node scripts/community-check.mjs",

@@ -8,8 +8,8 @@ import {
   TAbstractFile,
   TFile,
   WorkspaceLeaf,
-  moment,
   setIcon,
+  requireApiVersion,
 } from "obsidian";
 import {
   DEFAULT_SETTINGS,
@@ -24,6 +24,11 @@ import {
   trimIndex,
   updateIndexedMetadata,
 } from "./core";
+
+// Compatibility shape of Workspace.revealLeaf in obsidian@1.4.11 and 1.5.7.
+interface LegacyRevealWorkspace {
+  revealLeaf(leaf: WorkspaceLeaf): void;
+}
 
 const VIEW_TYPE_NEWEST_FILES = "newest-files-view";
 const SAVE_DELAY_MS = 1_000;
@@ -54,7 +59,7 @@ export default class NewestFilesPlugin extends Plugin {
 
     this.addCommand({
       id: "open-newest-files-view",
-      name: "Open Newest Files view",
+      name: "Open view",
       callback: () => {
         void this.activateView();
       },
@@ -62,7 +67,7 @@ export default class NewestFilesPlugin extends Plugin {
 
     this.addCommand({
       id: "rebuild-newest-files-index",
-      name: "Rebuild Newest Files index",
+      name: "Rebuild index",
       callback: () => {
         void this.rebuildBackfillIndex();
       },
@@ -88,14 +93,20 @@ export default class NewestFilesPlugin extends Plugin {
     }
   }
 
+  private excludeConfigFiles(index: Record<string, IndexedFile>): Record<string, IndexedFile> {
+    const configDir = this.app.vault.configDir;
+    return Object.fromEntries(Object.entries(index).filter(([path]) =>
+      path !== configDir && !path.startsWith(`${configDir}/`)));
+  }
+
   async loadPluginData(): Promise<void> {
     const data = (await this.loadData()) as NewestFilesPluginData | null;
     this.settings = normalizeSettings(data?.settings);
-    this.files = trimIndex(data?.files ?? {}, this.settings);
+    this.files = trimIndex(this.excludeConfigFiles(data?.files ?? {}), this.settings);
   }
 
   async savePluginData(): Promise<void> {
-    this.files = trimIndex(this.files, this.settings);
+    this.files = trimIndex(this.excludeConfigFiles(this.files), this.settings);
     await this.saveData({
       settings: this.settings,
       files: this.files,
@@ -116,7 +127,7 @@ export default class NewestFilesPlugin extends Plugin {
     if (this.pruneTimer !== null) return;
     this.pruneTimer = window.setTimeout(() => {
       this.pruneTimer = null;
-      this.files = trimIndex(this.files, this.settings);
+      this.files = trimIndex(this.excludeConfigFiles(this.files), this.settings);
       this.queueSave();
     }, SAVE_DELAY_MS);
   }
@@ -125,8 +136,15 @@ export default class NewestFilesPlugin extends Plugin {
     const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_NEWEST_FILES)[0];
     const leaf = existingLeaf ?? this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(false);
     await leaf.setViewState({ type: VIEW_TYPE_NEWEST_FILES, active: true });
-    // Not awaited: revealLeaf only returns a Promise from 1.7.2, and minAppVersion is 1.5.0.
-    this.app.workspace.revealLeaf(leaf);
+    const workspace = this.app.workspace;
+    if (requireApiVersion("1.7.2")) {
+      await workspace.revealLeaf(leaf);
+    } else {
+      // Public before 1.5.0; only the Promise return was introduced in 1.7.2.
+      // Keep the old void signature to support the declared minimum API.
+      const legacyWorkspace: LegacyRevealWorkspace = workspace;
+      legacyWorkspace.revealLeaf(leaf);
+    }
     this.refreshViews();
   }
 
@@ -147,7 +165,7 @@ export default class NewestFilesPlugin extends Plugin {
 
     for (let index = 0; index < files.length; index += 1) {
       const file = files[index];
-      if (shouldDisplayFile(file, this.settings)) {
+      if (shouldDisplayFile(file, this.settings, this.app.vault.configDir)) {
         nextIndex[file.path] = makeIndexedFile(file, "backfill", this.settings, Date.now());
       }
 
@@ -164,7 +182,8 @@ export default class NewestFilesPlugin extends Plugin {
 
   getDisplayFiles(): DisplayFile[] {
     this.pruneMissingIndexedFiles();
-    return buildDisplayFilesFromIndex(this.files, this.settings);
+    const visibleIndex = this.excludeConfigFiles(this.files);
+    return buildDisplayFilesFromIndex(visibleIndex, this.settings);
   }
 
   async openPath(path: string): Promise<void> {
@@ -203,14 +222,14 @@ export default class NewestFilesPlugin extends Plugin {
 
   async updateSettings(nextSettings: Partial<NewestFilesSettings>): Promise<void> {
     this.settings = normalizeSettings({ ...this.settings, ...nextSettings });
-    this.files = trimIndex(this.files, this.settings);
+    this.files = trimIndex(this.excludeConfigFiles(this.files), this.settings);
     await this.savePluginData();
     this.renderViewsNow();
   }
 
   private handleCreate(file: TAbstractFile): void {
     if (!(file instanceof TFile)) return;
-    if (!shouldDisplayFile(file, this.settings)) return;
+    if (!shouldDisplayFile(file, this.settings, this.app.vault.configDir)) return;
 
     const existing = this.files[file.path];
     this.files[file.path] = existing
@@ -233,7 +252,7 @@ export default class NewestFilesPlugin extends Plugin {
 
     const existing = this.files[oldPath];
     delete this.files[oldPath];
-    if (!shouldDisplayFile(file, this.settings)) {
+    if (!shouldDisplayFile(file, this.settings, this.app.vault.configDir)) {
       this.queueSave();
       this.refreshViews();
       return;
@@ -250,7 +269,7 @@ export default class NewestFilesPlugin extends Plugin {
 
   private handleModify(file: TAbstractFile): void {
     if (!(file instanceof TFile)) return;
-    if (!shouldDisplayFile(file, this.settings)) {
+    if (!shouldDisplayFile(file, this.settings, this.app.vault.configDir)) {
       delete this.files[file.path];
       this.queueSave();
       this.refreshViews();
@@ -400,16 +419,12 @@ class NewestFilesSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-    containerEl.addClass("newest-files-settings");
-    new Setting(containerEl).setName("File list").setHeading();
-
-    new Setting(containerEl)
-      .setName("Maximum files")
-      .setDesc("Number of files shown in the sidebar list.")
-      .addText((text) => {
+  getSettingDefinitions(): Array<{ name: string; desc: string; render: (setting: Setting) => void }> {
+    return [
+      {
+        name: "Maximum files",
+        desc: "Number of files shown in the sidebar list.",
+        render: (setting) => { setting.addText((text) => {
         text
           .setValue(String(this.plugin.settings.maxItems))
           .onChange((value) => {
@@ -418,21 +433,21 @@ class NewestFilesSettingTab extends PluginSettingTab {
         text.inputEl.type = "number";
         text.inputEl.min = "1";
         text.inputEl.max = String(MAX_INDEX_ENTRIES);
-      });
-
-    new Setting(containerEl)
-      .setName("Show timestamps")
-      .setDesc("Show an HH:mm timestamp before each filename.")
-      .addToggle((toggle) => {
+      }); },
+      },
+      {
+        name: "Show timestamps",
+        desc: "Show the time before each filename.",
+        render: (setting) => { setting.addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.showTimestamps).onChange((value) => {
           void this.plugin.updateSettings({ showTimestamps: value });
         });
-      });
-
-    new Setting(containerEl)
-      .setName("Sort source")
-      .setDesc("First-seen uses the plugin index; modified uses the current file metadata.")
-      .addDropdown((dropdown) => {
+      }); },
+      },
+      {
+        name: "Sort source",
+        desc: "First-seen uses the plugin index; modified uses the current file metadata.",
+        render: (setting) => { setting.addDropdown((dropdown) => {
         dropdown
           .addOption("first-seen", "First seen")
           .addOption("modified", "Modified")
@@ -440,12 +455,12 @@ class NewestFilesSettingTab extends PluginSettingTab {
           .onChange((value) => {
             void this.plugin.updateSettings({ sortMode: value === "modified" ? "modified" : "first-seen" });
           });
-      });
-
-    new Setting(containerEl)
-      .setName("Backfill timestamp")
-      .setDesc("Timestamp used when existing files are first indexed.")
-      .addDropdown((dropdown) => {
+      }); },
+      },
+      {
+        name: "Backfill timestamp",
+        desc: "Timestamp used when existing files are first indexed.",
+        render: (setting) => { setting.addDropdown((dropdown) => {
         dropdown
           .addOption("created", "Created")
           .addOption("modified", "Modified")
@@ -453,47 +468,62 @@ class NewestFilesSettingTab extends PluginSettingTab {
           .onChange((value) => {
             void this.plugin.updateSettings({ backfillTimestamp: value === "modified" ? "modified" : "created" });
           });
-      });
-
-    new Setting(containerEl)
-      .setName("Extension filter")
-      .setDesc("Optional comma- or space-separated extensions, for example: md pdf png xlsx.")
-      .addTextArea((text) => {
+      }); },
+      },
+      {
+        name: "Extension filter",
+        desc: "Optional comma- or space-separated extensions, for example: MD, PDF, PNG, or XLSX.",
+        render: (setting) => { setting.addTextArea((text) => {
+        text.inputEl.addClass("newest-files-settings__textarea");
         text
           .setPlaceholder("Leave empty to show all file types")
           .setValue(this.plugin.settings.extensionFilter)
           .onChange((value) => {
             void this.plugin.updateSettings({ extensionFilter: value });
           });
-      });
-
-    new Setting(containerEl)
-      .setName("Excluded paths")
-      .setDesc("One path or path prefix per line. Prefixes ending in / exclude that folder.")
-      .addTextArea((text) => {
+      }); },
+      },
+      {
+        name: "Excluded paths",
+        desc: "One path or path prefix per line. Prefixes ending in / exclude that folder.",
+        render: (setting) => { setting.addTextArea((text) => {
+        text.inputEl.addClass("newest-files-settings__textarea");
         text
-          .setPlaceholder(".obsidian/\n.trash/\nnode_modules/")
+          .setPlaceholder(`${this.app.vault.configDir}/\n.trash/\nnode_modules/`)
           .setValue(this.plugin.settings.excludedPaths)
           .onChange((value) => {
             void this.plugin.updateSettings({ excludedPaths: value });
           });
         text.inputEl.rows = 5;
-      });
-
-    new Setting(containerEl)
-      .setName("Rebuild index")
-      .setDesc("Replace the bounded first-seen index with current vault file metadata.")
-      .addButton((button) => {
+      }); },
+      },
+      {
+        name: "Rebuild index",
+        desc: "Replace the bounded first-seen index with current vault file metadata.",
+        render: (setting) => { setting.addButton((button) => {
         button.setButtonText("Rebuild").onClick(() => {
           void this.plugin.rebuildBackfillIndex();
         });
-      });
+      }); },
+      },
+    ];
+  }
+
+  // Obsidian before 1.13 renders the same controls through this fallback.
+  display(): void {
+    this.containerEl.empty();
+    new Setting(this.containerEl).setName("File list").setHeading();
+    for (const item of this.getSettingDefinitions()) {
+      const setting = new Setting(this.containerEl).setName(item.name).setDesc(item.desc);
+      item.render(setting);
+    }
   }
 }
 
 function formatListTime(timestamp: number): string {
   if (!Number.isFinite(timestamp) || timestamp <= 0) return "";
-  return moment(timestamp).format("HH:mm");
+  const date = new Date(timestamp);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
 function displayName(name: string, extension: string): string {

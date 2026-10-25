@@ -1,3 +1,4 @@
+import { hasUnsupportedAwaitedReveal } from "./check-reveal-compat.mjs";
 import fs from "node:fs";
 import https from "node:https";
 
@@ -7,11 +8,11 @@ const versions = JSON.parse(fs.readFileSync("versions.json", "utf8"));
 const source = fs.readFileSync("src/main.ts", "utf8");
 
 const expectedRepo = "https://github.com/viggomeesters/obsidian-newest-files";
+const expectedDirectoryRepo = "viggomeesters/obsidian-newest-files";
 const allowedManifestNamePattern = /^[A-Za-z0-9 ()+-]+$/;
 const lowerName = manifest.name.toLowerCase();
 const lowerDescription = manifest.description.toLowerCase();
 const directHeadingElementPattern = /\.createEl\(\s*["']h[1-6]["']/;
-const awaitedRevealLeafPattern = /await\s+[\w.]*\brevealLeaf\(/;
 const pluginNameHeadingPattern = new RegExp(
   `\\.setName\\(\\s*['\"]${escapeRegExp(manifest.name)}['\"]\\s*\\)\\.setHeading\\(`,
 );
@@ -24,7 +25,6 @@ const checks = [
   [fs.existsSync("CHANGELOG.md"), "changelog"],
   [fs.existsSync("SECURITY.md"), "security"],
   [fs.existsSync("CONTRIBUTING.md"), "contributing"],
-  [fs.existsSync(".github/workflows/release.yml"), "release workflow"],
   [manifest.id === "newest-files", "id"],
   [manifest.name === "Newest Files", "name"],
   [manifest.version === pkg.version, "version match"],
@@ -38,7 +38,7 @@ const checks = [
   [typeof manifest.description === "string" && manifest.description.length > 0 && !lowerDescription.startsWith("this is a plugin"), "description"],
   [!lowerDescription.includes("obsidian"), "description avoids obsidian"],
   [!source.includes("detachLeavesOfType"), "does not detach leaves in onunload"],
-  [!awaitedRevealLeafPattern.test(source) || meetsMinAppVersion("1.7.2"), "does not await revealLeaf below minAppVersion 1.7.2"],
+  [!hasUnsupportedAwaitedReveal(source, manifest.minAppVersion), "does not await revealLeaf below minAppVersion 1.7.2"],
   [!directHeadingElementPattern.test(source), "settings headings use Setting.setHeading instead of direct h1-h6 elements"],
   [!pluginNameHeadingPattern.test(source), "settings headings avoid the plugin name"],
 ];
@@ -60,10 +60,10 @@ async function checkCommunityDirectory() {
   const rawIdMatch = plugins.find((plugin) => plugin.id === manifest.id);
   const rawNameMatch = plugins.find((plugin) => plugin.name?.toLowerCase() === lowerName);
 
-  if (rawIdMatch && rawIdMatch.repo !== expectedRepo) {
+  if (rawIdMatch && rawIdMatch.repo !== expectedDirectoryRepo) {
     failures.push(`community directory already has id ${manifest.id}`);
   }
-  if (rawNameMatch && rawNameMatch.repo !== expectedRepo) {
+  if (rawNameMatch && rawNameMatch.repo !== expectedDirectoryRepo) {
     failures.push(`community directory already has name ${manifest.name}`);
   }
 
@@ -89,18 +89,6 @@ function fetchText(url) {
 
 async function fetchJson(url) {
   return JSON.parse(await fetchText(url));
-}
-
-function meetsMinAppVersion(required) {
-  const declared = String(manifest.minAppVersion ?? "").split(".").map(Number);
-  const target = required.split(".").map(Number);
-
-  for (let index = 0; index < target.length; index += 1) {
-    const current = declared[index] ?? 0;
-    if (!Number.isFinite(current)) return false;
-    if (current !== target[index]) return current > target[index];
-  }
-  return true;
 }
 
 function escapeRegExp(value) {

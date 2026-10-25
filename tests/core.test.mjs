@@ -125,3 +125,10 @@ test("formats file sizes", () => {
   assert.equal(formatFileSize(1536), "1.5 KB");
   assert.equal(formatFileSize(2 * 1024 * 1024), "2.0 MB");
 });
+
+// A custom configuration directory is hidden independently of saved user exclusions.
+test("custom vault configuration directory stays excluded", () => {
+  const settings = normalizeSettings({ excludedPaths: "" });
+  assert.equal(shouldDisplayFile(file("settings/plugins/data.json", 1, 1), settings, "settings"), false);
+  assert.equal(shouldDisplayFile(file("notes/settings.md", 1, 1), settings, "settings"), true);
+});

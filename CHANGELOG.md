@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5 - 2026-10-25
+
+- Reveal the existing view when the sidebar is collapsed.
+- Match the community directory repository identifier correctly.
+- Allow the supported non-awaited revealLeaf call and remove the GitHub Actions preflight requirement.
+- Make the production build command platform independent.
+
 ## 0.1.4
 
 - Renamed the settings tab heading from `Newest Files` to `File list` to avoid repeating the plugin name in settings headings.

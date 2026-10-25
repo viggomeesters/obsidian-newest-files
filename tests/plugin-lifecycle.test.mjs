@@ -82,6 +82,7 @@ class FakeTFile {
 }
 
 class FakeVault extends EventEmitter {
+  configDir = ".obsidian";
   constructor(files = []) {
     super();
     this.files = new Map(files.map((file) => [file.path, file]));
@@ -146,6 +147,8 @@ class FakeLeaf {
     await this.view.onOpen?.();
   }
 
+  getRoot() { return this.workspace.rightSplit; }
+
   async openFile(file) {
     this.openedFile = file;
   }
@@ -156,6 +159,8 @@ class FakeWorkspace {
     this.factories = new Map();
     this.leaves = [];
     this.revealedLeaf = null;
+    this.collapsed = true;
+    this.rightSplit = { expand: () => { this.collapsed = false; } };
   }
 
   getLeavesOfType(type) {
@@ -175,6 +180,7 @@ class FakeWorkspace {
   }
 
   revealLeaf(leaf) {
+    this.collapsed = false;
     this.revealedLeaf = leaf;
   }
 
@@ -309,6 +315,7 @@ function createFakeObsidianModule() {
       fromNow: () => "just now",
       format: () => new Date(timestamp).toISOString().slice(0, 16).replace("T", " "),
     }),
+    requireApiVersion: () => globalThis.__legacyRevealApi !== true,
     setIcon: (element, icon) => {
       element.icon = icon;
     },
@@ -501,9 +508,50 @@ test("activating the view reveals the leaf so a collapsed sidebar opens", async 
   assert.ok(leaf, "expected a leaf hosting the view");
   assert.equal(app.workspace.revealedLeaf, leaf);
 
+  assert.equal(app.workspace.collapsed, false);
+  app.workspace.collapsed = true;
   app.workspace.revealedLeaf = null;
   await plugin.activateView();
+  assert.equal(app.workspace.collapsed, false);
 
   assert.equal(app.workspace.getLeavesOfType("newest-files-view").length, 1);
   assert.equal(app.workspace.revealedLeaf, leaf, "an existing leaf must be revealed again");
+});
+
+test("custom configuration entries cannot displace vault files when loading a full index", async () => {
+  globalThis.window = globalThis;
+  const NewestFilesPlugin = loadPluginClass();
+  const files = [new FakeTFile("notes/keep.md", 1, 1, 1)];
+  const app = makeApp(files);
+  app.vault.configDir = "custom-config";
+  app.savedData = { settings: { excludedPaths: "" }, files: {} };
+  for (let i = 0; i < 5001; i++) {
+    const path = `custom-config/cache-${i}.json`;
+    app.savedData.files[path] = { path, firstSeen: i + 2, firstSeenSource: "backfill", ctime: 1, mtime: 1, size: 1 };
+  }
+  app.savedData.files["notes/keep.md"] = { path: "notes/keep.md", firstSeen: 1, firstSeenSource: "backfill", ctime: 1, mtime: 1, size: 1 };
+  const plugin = new NewestFilesPlugin(app);
+  await plugin.onload();
+  assert.deepEqual(Object.keys(plugin.files), ["notes/keep.md"]);
+  assert.equal(plugin.getDisplayFiles()[0].path, "notes/keep.md");
+  plugin.onunload();
+});
+
+test("legacy void reveal API opens the existing sidebar without a version bump", async () => {
+  globalThis.window = globalThis;
+  globalThis.__legacyRevealApi = true;
+  try {
+    const NewestFilesPlugin = loadPluginClass();
+    const app = makeApp([]);
+    const plugin = new NewestFilesPlugin(app);
+    await plugin.onload();
+    await plugin.activateView();
+    const leaf = app.workspace.getLeavesOfType("newest-files-view")[0];
+    assert.equal(app.workspace.revealedLeaf, leaf);
+    app.workspace.collapsed = true;
+    await plugin.activateView();
+    assert.equal(app.workspace.collapsed, false);
+    assert.equal(app.workspace.getLeavesOfType("newest-files-view").length, 1);
+    plugin.onunload();
+  } finally { delete globalThis.__legacyRevealApi; }
 });
