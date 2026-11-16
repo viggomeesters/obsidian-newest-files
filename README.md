@@ -137,3 +137,6 @@ GitHub release assets must include exactly the Obsidian runtime files:
 - `styles.css`
 
 The release tag must match `manifest.json.version`.
+
+
+[Obsidian 1.15.1 assessment: checked source, local results and remaining host validation](docs/obsidian-1.15.1.md).
