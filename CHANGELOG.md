@@ -3,7 +3,8 @@
 ## 0.1.6 - 2026-11-16
 
 - Maintenance verification for Obsidian 1.15.1 on macOS desktop.
-- Add reproducible official Obsidian lint checks; no runtime code change.
+- Preserve a visible inset keyboard focus outline even when the base row resets box shadows.
+- Add reproducible official Obsidian lint checks.
 
 ## 0.1.5 - 2026-10-25
 
